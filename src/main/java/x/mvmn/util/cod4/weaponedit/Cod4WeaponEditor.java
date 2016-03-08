@@ -132,7 +132,7 @@ public class Cod4WeaponEditor {
 				if (table.getSelectedRowCount() > 0) {
 					final SortedSet<String> properties = new TreeSet<String>();
 					for (final int row : table.getSelectedRows()) {
-						properties.add(mainModel.getValueAt(row, 0).toString());
+						properties.add(table.getValueAt(row, 0).toString());
 					}
 					final StringBuilder listOfProps = new StringBuilder();
 					for (final String prop : properties) {
