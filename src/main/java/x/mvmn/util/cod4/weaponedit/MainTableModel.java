@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.SortedSet;
 import java.util.TreeMap;
 import java.util.TreeSet;
@@ -25,6 +26,27 @@ public class MainTableModel implements TableModel {
 	protected volatile Map<Integer, WeaponData> dataMap = new TreeMap<Integer, WeaponData>();
 	protected volatile Map<Integer, File> fileMap = new TreeMap<Integer, File>();
 	protected final AtomicInteger counter = new AtomicInteger(0);
+
+	public void deleteProperties(final Set<String> propertyNames) {
+		synchronized (this) {
+			propertiesNames.removeAll(propertyNames);
+			for (final WeaponData data : dataMap.values()) {
+				for (final String propertyName : propertyNames) {
+					data.setProperty(propertyName, null);
+				}
+			}
+		}
+		tableChanged(new TableModelEvent(this, TableModelEvent.HEADER_ROW));
+	}
+
+	public void addProperty(final String propertyName) {
+		synchronized (this) {
+			final SortedSet<String> propertiesNamesSet = new TreeSet<String>(propertiesNames);
+			propertiesNamesSet.add(propertyName);
+			propertiesNames = new ArrayList<String>(propertiesNamesSet);
+		}
+		tableChanged(new TableModelEvent(this, TableModelEvent.HEADER_ROW));
+	}
 
 	public void addData(final File file, final WeaponData data) {
 		final Integer index = counter.incrementAndGet();

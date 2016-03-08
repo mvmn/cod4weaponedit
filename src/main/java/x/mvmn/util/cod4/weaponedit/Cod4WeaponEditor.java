@@ -5,12 +5,15 @@ import java.awt.GridLayout;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.File;
+import java.util.SortedSet;
+import java.util.TreeSet;
 
 import javax.swing.BorderFactory;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
 import javax.swing.JFileChooser;
 import javax.swing.JFrame;
+import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTable;
@@ -32,6 +35,8 @@ public class Cod4WeaponEditor {
 
 	protected final MainTableModel mainModel = new MainTableModel();
 
+	protected final JButton btnAddProperty = new JButton("Add property...");
+	protected final JButton btnDeleteProperties = new JButton("Delete selected properties");
 	protected final JButton btnLoad = new JButton("Load...");
 	protected final JButton btnSave = new JButton("Save all");
 
@@ -113,13 +118,46 @@ public class Cod4WeaponEditor {
 			}
 		});
 
+		btnAddProperty.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent actEvent) {
+				String input = JOptionPane.showInputDialog(mainWindow, "Enter new property key", "Add property", JOptionPane.PLAIN_MESSAGE);
+				if (input != null && !input.trim().isEmpty()) {
+					mainModel.addProperty(input.trim());
+				}
+			}
+		});
+
+		btnDeleteProperties.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				if (table.getSelectedRowCount() > 0) {
+					final SortedSet<String> properties = new TreeSet<String>();
+					for (final int row : table.getSelectedRows()) {
+						properties.add(mainModel.getValueAt(row, 0).toString());
+					}
+					final StringBuilder listOfProps = new StringBuilder();
+					for (final String prop : properties) {
+						if (listOfProps.length() > 0) {
+							listOfProps.append(", ");
+						}
+						listOfProps.append(prop);
+					}
+					if (JOptionPane.YES_OPTION == JOptionPane.showConfirmDialog(mainWindow,
+							"Are you sure you want to delete these properties: " + listOfProps.toString() + "?", "Confirm deletion", JOptionPane.YES_NO_OPTION)) {
+						mainModel.deleteProperties(properties);
+					}
+				}
+			}
+		});
+
 		mainWindow.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
 		mainWindow.getContentPane().setLayout(new BorderLayout());
 		mainWindow.getContentPane().add(new JScrollPane(table), BorderLayout.CENTER);
-		JPanel filterPanel = new JPanel(new GridLayout(2, 1));
-		filterPanel.add(tfFilter);
-		filterPanel.add(cbHideEqual);
-		mainWindow.getContentPane().add(filterPanel, BorderLayout.NORTH);
+		JPanel topPanel = new JPanel(new GridLayout(4, 1));
+		topPanel.add(tfFilter);
+		topPanel.add(cbHideEqual);
+		topPanel.add(btnAddProperty);
+		topPanel.add(btnDeleteProperties);
+		mainWindow.getContentPane().add(topPanel, BorderLayout.NORTH);
 		mainWindow.getContentPane().add(btnPanel, BorderLayout.SOUTH);
 
 		mainWindow.pack();
