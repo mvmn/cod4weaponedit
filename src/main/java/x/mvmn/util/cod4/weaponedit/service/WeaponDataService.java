@@ -14,6 +14,7 @@ import x.mvmn.util.cod4.weaponedit.model.WeaponData;
 public class WeaponDataService {
 
 	public boolean save(final File file, final WeaponData weaponData, final boolean overwrite) {
+		System.out.println("Saving file: " + file.getAbsolutePath());
 		boolean result = false;
 		if (file.exists() && overwrite || !file.exists()) {
 			if (file.exists()) {
@@ -34,6 +35,7 @@ public class WeaponDataService {
 	}
 
 	public WeaponData load(final File file) {
+		System.out.println("Loading file: " + file.getAbsolutePath());
 		WeaponData result = null;
 		if (file.exists()) {
 			try {
