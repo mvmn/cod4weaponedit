@@ -32,6 +32,8 @@ import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 import javax.swing.table.TableRowSorter;
 
+import com.cordinc.util.gui.ClipboardKeyAdapter;
+
 import x.mvmn.util.cod4.weaponedit.model.WeaponData;
 import x.mvmn.util.cod4.weaponedit.service.WeaponDataService;
 
@@ -62,6 +64,8 @@ public class Cod4WeaponEditor {
 		table = new JTable(mainModel);
 		final TableRowSorter<MainTableModel> rowSorter = new TableRowSorter<MainTableModel>(mainModel);
 		table.setRowSorter(rowSorter);
+		table.setCellSelectionEnabled(true);
+		table.addKeyListener(new ClipboardKeyAdapter(table));
 
 		tfFilter.getDocument().addDocumentListener(new DocumentListener() {
 			public void removeUpdate(DocumentEvent e) {
@@ -154,8 +158,8 @@ public class Cod4WeaponEditor {
 					}
 					final JScrollPane scrollPane = new JScrollPane(checkboxesPanel);
 					scrollPane.setPreferredSize(new Dimension(Math.min(Toolkit.getDefaultToolkit().getScreenSize().width / 2,
-							checkboxesPanel.getPreferredSize().width), Math.min(Toolkit.getDefaultToolkit().getScreenSize().height / 2,
-							checkboxesPanel.getPreferredSize().height)));
+							scrollPane.getPreferredSize().width), Math.min(Toolkit.getDefaultToolkit().getScreenSize().height / 2,
+							scrollPane.getPreferredSize().height)));
 					if (JOptionPane.OK_OPTION == JOptionPane.showConfirmDialog(mainWindow, scrollPane, "Close files", JOptionPane.OK_CANCEL_OPTION)) {
 						for (final Integer index : indexes) {
 							if (checkboxesPerIndex.get(index).isSelected()) {
@@ -189,8 +193,8 @@ public class Cod4WeaponEditor {
 					}
 					final JScrollPane scrollPane = new JScrollPane(checkboxesPanel);
 					scrollPane.setPreferredSize(new Dimension(Math.min(Toolkit.getDefaultToolkit().getScreenSize().width / 2,
-							checkboxesPanel.getPreferredSize().width), Math.min(Toolkit.getDefaultToolkit().getScreenSize().height / 2,
-							checkboxesPanel.getPreferredSize().height)));
+							scrollPane.getPreferredSize().width), Math.min(Toolkit.getDefaultToolkit().getScreenSize().height / 2,
+							scrollPane.getPreferredSize().height)));
 					if (JOptionPane.OK_OPTION == JOptionPane.showConfirmDialog(mainWindow, scrollPane, "Save files", JOptionPane.OK_CANCEL_OPTION)) {
 						new Thread() {
 							public void run() {
@@ -223,15 +227,20 @@ public class Cod4WeaponEditor {
 				final int colCount = mainModel.getColumnCount();
 				if (colCount > 1) {
 					btnSaveAll.setEnabled(false);
-					final StringBuilder fileList = new StringBuilder("Are you sure? Files that will be overwritten:\n");
+					final JPanel listPanel = new JPanel(new GridLayout(colCount, 1));
+					listPanel.add(new JLabel("Are you sure? Files that will be overwritten:"));
 					final Map<File, WeaponData> dataToSave = new HashMap<File, WeaponData>();
 					for (int i = 1; i < colCount; i++) {
 						final File file = mainModel.getFile(i);
 						dataToSave.put(file, mainModel.getData(i));
-						fileList.append(" - ").append(file.getAbsolutePath()).append("\n");
+						listPanel.add(new JLabel(" - " + file.getAbsolutePath()));
 					}
 
-					if (JOptionPane.YES_OPTION == JOptionPane.showConfirmDialog(mainWindow, fileList.toString(), "Save all files?", JOptionPane.YES_NO_OPTION)) {
+					final JScrollPane scrollPane = new JScrollPane(listPanel);
+					scrollPane.setPreferredSize(new Dimension(Math.min(Toolkit.getDefaultToolkit().getScreenSize().width / 2,
+							scrollPane.getPreferredSize().width), Math.min(Toolkit.getDefaultToolkit().getScreenSize().height / 2,
+							scrollPane.getPreferredSize().height)));
+					if (JOptionPane.YES_OPTION == JOptionPane.showConfirmDialog(mainWindow, scrollPane, "Save all files?", JOptionPane.YES_NO_OPTION)) {
 						new Thread() {
 							public void run() {
 								try {
@@ -272,15 +281,16 @@ public class Cod4WeaponEditor {
 					for (final int row : table.getSelectedRows()) {
 						properties.add(table.getValueAt(row, 0).toString());
 					}
-					final StringBuilder listOfProps = new StringBuilder();
+					final JPanel listPanel = new JPanel(new GridLayout(properties.size() + 1, 1));
+					listPanel.add(new JLabel("Are you sure you want to delete these properties?"));
 					for (final String prop : properties) {
-						if (listOfProps.length() > 0) {
-							listOfProps.append(", ");
-						}
-						listOfProps.append(prop);
+						listPanel.add(new JLabel(" - " + prop));
 					}
-					if (JOptionPane.YES_OPTION == JOptionPane.showConfirmDialog(mainWindow,
-							"Are you sure you want to delete these properties: " + listOfProps.toString() + "?", "Confirm deletion", JOptionPane.YES_NO_OPTION)) {
+					final JScrollPane scrollPane = new JScrollPane(listPanel);
+					scrollPane.setPreferredSize(new Dimension(Math.min(Toolkit.getDefaultToolkit().getScreenSize().width / 2,
+							scrollPane.getPreferredSize().width), Math.min(Toolkit.getDefaultToolkit().getScreenSize().height / 2,
+							scrollPane.getPreferredSize().height)));
+					if (JOptionPane.YES_OPTION == JOptionPane.showConfirmDialog(mainWindow, scrollPane, "Delete properties", JOptionPane.YES_NO_OPTION)) {
 						mainModel.deleteProperties(properties);
 					}
 				}

@@ -43,12 +43,14 @@ public class MainTableModel implements TableModel {
 	}
 
 	public void addProperty(final String propertyName) {
-		synchronized (lockObject) {
-			final SortedSet<String> propertiesNamesSet = new TreeSet<String>(propertiesNames);
-			propertiesNamesSet.add(propertyName);
-			propertiesNames = new ArrayList<String>(propertiesNamesSet);
+		if (!propertyName.contains(propertyName)) {
+			synchronized (lockObject) {
+				final SortedSet<String> propertiesNamesSet = new TreeSet<String>(propertiesNames);
+				propertiesNamesSet.add(propertyName);
+				propertiesNames = new ArrayList<String>(propertiesNamesSet);
+			}
+			tableChanged(new TableModelEvent(this, TableModelEvent.HEADER_ROW));
 		}
-		tableChanged(new TableModelEvent(this, TableModelEvent.HEADER_ROW));
 	}
 
 	public void removeData(final int index) {
