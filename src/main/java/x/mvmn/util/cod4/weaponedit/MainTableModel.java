@@ -12,6 +12,7 @@ import java.util.TreeSet;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import javax.swing.SwingUtilities;
 import javax.swing.event.TableModelEvent;
 import javax.swing.event.TableModelListener;
 import javax.swing.table.TableModel;
@@ -27,8 +28,10 @@ public class MainTableModel implements TableModel {
 	protected volatile Map<Integer, File> fileMap = new TreeMap<Integer, File>();
 	protected final AtomicInteger counter = new AtomicInteger(0);
 
+	protected final Object lockObject = new Object();
+
 	public void deleteProperties(final Set<String> propertyNames) {
-		synchronized (this) {
+		synchronized (lockObject) {
 			propertiesNames.removeAll(propertyNames);
 			for (final WeaponData data : dataMap.values()) {
 				for (final String propertyName : propertyNames) {
@@ -40,7 +43,7 @@ public class MainTableModel implements TableModel {
 	}
 
 	public void addProperty(final String propertyName) {
-		synchronized (this) {
+		synchronized (lockObject) {
 			final SortedSet<String> propertiesNamesSet = new TreeSet<String>(propertiesNames);
 			propertiesNamesSet.add(propertyName);
 			propertiesNames = new ArrayList<String>(propertiesNamesSet);
@@ -49,15 +52,28 @@ public class MainTableModel implements TableModel {
 	}
 
 	public void addData(final File file, final WeaponData data) {
-		final Integer index = counter.incrementAndGet();
-		synchronized (this) {
+		synchronized (lockObject) {
+			final Integer index = counter.incrementAndGet();
 			final SortedSet<String> propertiesNamesSet = new TreeSet<String>(propertiesNames);
+			final Map<Integer, WeaponData> newDataMap = new TreeMap<Integer, WeaponData>(dataMap);
+			final Map<Integer, File> newFileMap = new TreeMap<Integer, File>(fileMap);
 			propertiesNamesSet.addAll(data.listProperties());
-			propertiesNames = new ArrayList<String>(propertiesNamesSet);
-			dataMap.put(index, data);
-			fileMap.put(index, file);
+			final List<String> newPropertiesNames = new ArrayList<String>(propertiesNamesSet);
+			newFileMap.put(index, file);
+			newDataMap.put(index, data);
+			try {
+				SwingUtilities.invokeAndWait(new Runnable() {
+					public void run() {
+						fileMap = newFileMap;
+						dataMap = newDataMap;
+						propertiesNames = newPropertiesNames;
+						tableChanged(new TableModelEvent(MainTableModel.this, TableModelEvent.HEADER_ROW));
+					}
+				});
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
 		}
-		tableChanged(new TableModelEvent(this, TableModelEvent.HEADER_ROW));
 		// tableChanged(new TableModelEvent(this, 0, getRowCount(), TableModelEvent.ALL_COLUMNS, TableModelEvent.INSERT));
 	}
 

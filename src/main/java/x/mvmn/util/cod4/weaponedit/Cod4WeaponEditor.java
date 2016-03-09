@@ -11,6 +11,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.SortedSet;
 import java.util.TreeSet;
+import java.util.regex.Pattern;
 
 import javax.swing.BorderFactory;
 import javax.swing.JButton;
@@ -47,8 +48,10 @@ public class Cod4WeaponEditor {
 	protected final JButton btnSaveAll = new JButton("Save all");
 
 	protected final JTextField tfFilter = new JTextField("");
-	protected final JCheckBox cbHideEqual = new JCheckBox("Hide equal rows", false);
-	protected final JCheckBox cbSearchValues = new JCheckBox("Search include values", false);
+	protected final JCheckBox cbHideEqual = new JCheckBox("Hide equal rows (diff)", false);
+	protected final JCheckBox cbSearchValues = new JCheckBox("Search include values", true);
+	protected final JCheckBox cbSearchCaseSensitive = new JCheckBox("Search case sensitive", false);
+	protected final JCheckBox cbSearchRegex = new JCheckBox("Search by regular expression", true);
 
 	protected final WeaponDataService weaponDataService = new WeaponDataService();
 
@@ -82,9 +85,12 @@ public class Cod4WeaponEditor {
 
 		cbHideEqual.addActionListener(updFilteringActListener);
 		cbSearchValues.addActionListener(updFilteringActListener);
+		cbSearchCaseSensitive.addActionListener(updFilteringActListener);
+		cbSearchRegex.addActionListener(updFilteringActListener);
 
 		btnLoad.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent actEvent) {
+				btnLoad.setEnabled(false);
 				final JFileChooser fileChoose = new JFileChooser();
 				if (System.getProperty("user.dir") != null) {
 					final File currentDir = new File(System.getProperty("user.dir"));
@@ -95,11 +101,26 @@ public class Cod4WeaponEditor {
 				fileChoose.setMultiSelectionEnabled(true);
 				fileChoose.setFileSelectionMode(JFileChooser.FILES_ONLY);
 				if (JFileChooser.APPROVE_OPTION == fileChoose.showOpenDialog(null)) {
-					for (final File file : fileChoose.getSelectedFiles()) {
-						// TODO: Move off EDT
-						final WeaponData weaponData = weaponDataService.load(file);
-						setData(file, weaponData);
-					}
+					new Thread() {
+						public void run() {
+							try {
+								synchronized (mainModel) {
+									for (final File file : fileChoose.getSelectedFiles()) {
+										final WeaponData weaponData = weaponDataService.load(file);
+										mainModel.addData(file, weaponData);
+									}
+								}
+							} finally {
+								SwingUtilities.invokeLater(new Runnable() {
+									public void run() {
+										btnLoad.setEnabled(true);
+									}
+								});
+							}
+						}
+					}.start();
+				} else {
+					btnLoad.setEnabled(true);
 				}
 			}
 		});
@@ -224,8 +245,12 @@ public class Cod4WeaponEditor {
 		final JPanel propBtnPabel = new JPanel(new GridLayout(1, 2));
 		filterPanel.setBorder(BorderFactory.createTitledBorder("Filters"));
 		filterPanel.add(tfFilter);
+		final JPanel filterOptionsPanel = new JPanel(new GridLayout(1, 3));
+		filterPanel.add(filterOptionsPanel);
+		filterOptionsPanel.add(cbSearchValues);
+		filterOptionsPanel.add(cbSearchCaseSensitive);
+		filterOptionsPanel.add(cbSearchRegex);
 		filterPanel.add(cbHideEqual);
-		filterPanel.add(cbSearchValues);
 
 		propBtnPabel.add(btnAddProperty);
 		propBtnPabel.add(btnDeleteProperties);
@@ -253,17 +278,64 @@ public class Cod4WeaponEditor {
 	}
 
 	protected void updateRowFilter(final TableRowSorter<MainTableModel> rowSorter) {
-		final String text = tfFilter.getText().toLowerCase();
+		String text = tfFilter.getText();
 		final boolean hideEqual = cbHideEqual.isSelected();
 		final boolean searchValues = cbSearchValues.isSelected();
+		final boolean searchCaseSensitive = cbSearchCaseSensitive.isSelected();
+		final boolean searchRegex = cbSearchRegex.isSelected();
+
+		final int patternFlags = Pattern.MULTILINE | Pattern.DOTALL | (searchCaseSensitive ? 0 : Pattern.CASE_INSENSITIVE);
+		Pattern pattern = Pattern.compile(".*", patternFlags);
+		if (!text.isEmpty()) {
+			if (searchRegex) {
+				try {
+					if (!text.startsWith("^")) {
+						text = ".*" + text;
+					}
+					if (!text.endsWith("$")) {
+						text = text + ".*";
+					}
+					pattern = Pattern.compile(text, patternFlags);
+				} catch (Exception e) {
+					pattern = Pattern.compile("$^", patternFlags); // Match nothing for bad pattern
+				}
+			} else {
+				pattern = Pattern.compile(".*" + Pattern.quote(text) + ".*", patternFlags);
+			}
+		}
+
+		final Pattern thePattern = pattern;
+
 		rowSorter.setRowFilter(new RowFilter<MainTableModel, Integer>() {
+
+			protected String getTextVal(String text) {
+				if (text == null) {
+					text = "";
+				}
+				final String result;
+				if (searchCaseSensitive) {
+					result = text;
+				} else {
+					result = text.toLowerCase();
+				}
+				return result;
+			}
+
+			protected boolean match(final String text) {
+				return thePattern.matcher(text).matches();
+			}
+
+			protected boolean matchTextVal(RowFilter.Entry<? extends MainTableModel, ? extends Integer> entry, int index) {
+				return match(getTextVal(entry.getStringValue(index)));
+			}
+
 			@Override
-			public boolean include(javax.swing.RowFilter.Entry<? extends MainTableModel, ? extends Integer> entry) {
+			public boolean include(RowFilter.Entry<? extends MainTableModel, ? extends Integer> entry) {
 				final int columnCount = entry.getModel().getColumnCount();
-				boolean result = text.isEmpty() || entry.getStringValue(0).toLowerCase().contains(text);
+				boolean result = matchTextVal(entry, 0);
 				if (!result && searchValues) {
 					for (int i = 1; i < columnCount; i++) {
-						result = entry.getStringValue(i).toLowerCase().contains(text);
+						result = matchTextVal(entry, i);
 						if (result) {
 							break;
 						}
@@ -284,10 +356,6 @@ public class Cod4WeaponEditor {
 				return result;
 			}
 		});
-	}
-
-	protected void setData(final File file, final WeaponData data) {
-		mainModel.addData(file, data);
 	}
 
 	public static void main(String args[]) {
