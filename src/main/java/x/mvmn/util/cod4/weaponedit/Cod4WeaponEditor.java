@@ -80,6 +80,12 @@ public class Cod4WeaponEditor {
 		btnLoad.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent actEvent) {
 				final JFileChooser fileChoose = new JFileChooser();
+				if (System.getProperty("user.dir") != null) {
+					final File currentDir = new File(System.getProperty("user.dir"));
+					if (currentDir.exists()) {
+						fileChoose.setCurrentDirectory(currentDir);
+					}
+				}
 				fileChoose.setMultiSelectionEnabled(true);
 				fileChoose.setFileSelectionMode(JFileChooser.FILES_ONLY);
 				if (JFileChooser.APPROVE_OPTION == fileChoose.showOpenDialog(null)) {
@@ -152,7 +158,7 @@ public class Cod4WeaponEditor {
 		mainWindow.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
 		mainWindow.getContentPane().setLayout(new BorderLayout());
 		mainWindow.getContentPane().add(new JScrollPane(table), BorderLayout.CENTER);
-		JPanel topPanel = new JPanel(new GridLayout(4, 1));
+		final JPanel topPanel = new JPanel(new GridLayout(4, 1));
 		topPanel.add(tfFilter);
 		topPanel.add(cbHideEqual);
 		topPanel.add(btnAddProperty);
