@@ -48,6 +48,7 @@ public class Cod4WeaponEditor {
 
 	protected final JTextField tfFilter = new JTextField("");
 	protected final JCheckBox cbHideEqual = new JCheckBox("Hide equal rows", false);
+	protected final JCheckBox cbSearchValues = new JCheckBox("Search include values", false);
 
 	protected final WeaponDataService weaponDataService = new WeaponDataService();
 
@@ -72,11 +73,15 @@ public class Cod4WeaponEditor {
 				updateRowFilter(rowSorter);
 			}
 		});
-		cbHideEqual.addActionListener(new ActionListener() {
+
+		final ActionListener updFilteringActListener = new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
 				updateRowFilter(rowSorter);
 			}
-		});
+		};
+
+		cbHideEqual.addActionListener(updFilteringActListener);
+		cbSearchValues.addActionListener(updFilteringActListener);
 
 		btnLoad.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent actEvent) {
@@ -215,11 +220,12 @@ public class Cod4WeaponEditor {
 			}
 		});
 
-		final JPanel filterPanel = new JPanel(new GridLayout(2, 1));
+		final JPanel filterPanel = new JPanel(new GridLayout(3, 1));
 		final JPanel propBtnPabel = new JPanel(new GridLayout(1, 2));
 		filterPanel.setBorder(BorderFactory.createTitledBorder("Filters"));
 		filterPanel.add(tfFilter);
 		filterPanel.add(cbHideEqual);
+		filterPanel.add(cbSearchValues);
 
 		propBtnPabel.add(btnAddProperty);
 		propBtnPabel.add(btnDeleteProperties);
@@ -249,11 +255,21 @@ public class Cod4WeaponEditor {
 	protected void updateRowFilter(final TableRowSorter<MainTableModel> rowSorter) {
 		final String text = tfFilter.getText().toLowerCase();
 		final boolean hideEqual = cbHideEqual.isSelected();
+		final boolean searchValues = cbSearchValues.isSelected();
 		rowSorter.setRowFilter(new RowFilter<MainTableModel, Integer>() {
 			@Override
 			public boolean include(javax.swing.RowFilter.Entry<? extends MainTableModel, ? extends Integer> entry) {
 				final int columnCount = entry.getModel().getColumnCount();
 				boolean result = text.isEmpty() || entry.getStringValue(0).toLowerCase().contains(text);
+				if (!result && searchValues) {
+					for (int i = 1; i < columnCount; i++) {
+						result = entry.getStringValue(i).toLowerCase().contains(text);
+						if (result) {
+							break;
+						}
+					}
+				}
+
 				if (result && hideEqual && columnCount > 2) {
 					result = false;
 					final String one = entry.getStringValue(1);
