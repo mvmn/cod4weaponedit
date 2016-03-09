@@ -51,27 +51,55 @@ public class MainTableModel implements TableModel {
 		tableChanged(new TableModelEvent(this, TableModelEvent.HEADER_ROW));
 	}
 
-	public void addData(final File file, final WeaponData data) {
+	public void removeData(final int index) {
 		synchronized (lockObject) {
-			final Integer index = counter.incrementAndGet();
-			final SortedSet<String> propertiesNamesSet = new TreeSet<String>(propertiesNames);
+			final int lastIndex = counter.get();
 			final Map<Integer, WeaponData> newDataMap = new TreeMap<Integer, WeaponData>(dataMap);
 			final Map<Integer, File> newFileMap = new TreeMap<Integer, File>(fileMap);
-			propertiesNamesSet.addAll(data.listProperties());
+			newDataMap.remove(index);
+			newFileMap.remove(index);
+			for (int i = index; i < lastIndex - 1; i++) {
+				newDataMap.put(i, newDataMap.get(i + 1));
+				newFileMap.put(i, newFileMap.get(i + 1));
+			}
+			newDataMap.remove(lastIndex);
+			newFileMap.remove(lastIndex);
+			final SortedSet<String> propertiesNamesSet = new TreeSet<String>();
+			for (final WeaponData data : newDataMap.values()) {
+				propertiesNamesSet.addAll(data.listProperties());
+			}
 			final List<String> newPropertiesNames = new ArrayList<String>(propertiesNamesSet);
-			newFileMap.put(index, file);
-			newDataMap.put(index, data);
-			try {
-				SwingUtilities.invokeAndWait(new Runnable() {
-					public void run() {
-						fileMap = newFileMap;
-						dataMap = newDataMap;
-						propertiesNames = newPropertiesNames;
-						tableChanged(new TableModelEvent(MainTableModel.this, TableModelEvent.HEADER_ROW));
-					}
-				});
-			} catch (Exception e) {
-				e.printStackTrace();
+			counter.decrementAndGet();
+			fileMap = newFileMap;
+			dataMap = newDataMap;
+			propertiesNames = newPropertiesNames;
+		}
+		tableChanged(new TableModelEvent(MainTableModel.this, TableModelEvent.HEADER_ROW));
+	}
+
+	public void addData(final File file, final WeaponData data) {
+		if (!fileMap.containsValue(file)) {
+			synchronized (lockObject) {
+				final Integer index = counter.incrementAndGet();
+				final SortedSet<String> propertiesNamesSet = new TreeSet<String>(propertiesNames);
+				final Map<Integer, WeaponData> newDataMap = new TreeMap<Integer, WeaponData>(dataMap);
+				final Map<Integer, File> newFileMap = new TreeMap<Integer, File>(fileMap);
+				propertiesNamesSet.addAll(data.listProperties());
+				final List<String> newPropertiesNames = new ArrayList<String>(propertiesNamesSet);
+				newFileMap.put(index, file);
+				newDataMap.put(index, data);
+				try {
+					SwingUtilities.invokeAndWait(new Runnable() {
+						public void run() {
+							fileMap = newFileMap;
+							dataMap = newDataMap;
+							propertiesNames = newPropertiesNames;
+							tableChanged(new TableModelEvent(MainTableModel.this, TableModelEvent.HEADER_ROW));
+						}
+					});
+				} catch (Exception e) {
+					e.printStackTrace();
+				}
 			}
 		}
 		// tableChanged(new TableModelEvent(this, 0, getRowCount(), TableModelEvent.ALL_COLUMNS, TableModelEvent.INSERT));

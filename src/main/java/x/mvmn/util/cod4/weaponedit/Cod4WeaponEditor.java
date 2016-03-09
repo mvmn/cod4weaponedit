@@ -1,7 +1,9 @@
 package x.mvmn.util.cod4.weaponedit;
 
 import java.awt.BorderLayout;
+import java.awt.Dimension;
 import java.awt.GridLayout;
+import java.awt.Toolkit;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.File;
@@ -46,6 +48,7 @@ public class Cod4WeaponEditor {
 	protected final JButton btnLoad = new JButton("Load...");
 	protected final JButton btnSave = new JButton("Save...");
 	protected final JButton btnSaveAll = new JButton("Save all");
+	protected final JButton btnClose = new JButton("Close...");
 
 	protected final JTextField tfFilter = new JTextField("");
 	protected final JCheckBox cbHideEqual = new JCheckBox("Hide equal rows (diff)", false);
@@ -90,7 +93,10 @@ public class Cod4WeaponEditor {
 
 		btnLoad.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent actEvent) {
-				btnLoad.setEnabled(false);
+				final JButton buttons[] = { btnLoad, btnSave, btnSaveAll, btnClose };
+				for (final JButton btn : buttons) {
+					btn.setEnabled(false);
+				}
 				final JFileChooser fileChoose = new JFileChooser();
 				if (System.getProperty("user.dir") != null) {
 					final File currentDir = new File(System.getProperty("user.dir"));
@@ -113,14 +119,51 @@ public class Cod4WeaponEditor {
 							} finally {
 								SwingUtilities.invokeLater(new Runnable() {
 									public void run() {
-										btnLoad.setEnabled(true);
+										for (final JButton btn : buttons) {
+											btn.setEnabled(true);
+										}
 									}
 								});
 							}
 						}
 					}.start();
 				} else {
-					btnLoad.setEnabled(true);
+					for (final JButton btn : buttons) {
+						btn.setEnabled(true);
+					}
+				}
+			}
+		});
+
+		btnClose.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				final int colCount = mainModel.getColumnCount();
+				if (colCount > 1) {
+					btnClose.setEnabled(false);
+
+					final List<Integer> indexes = new ArrayList<Integer>(colCount - 1);
+					final Map<Integer, JCheckBox> checkboxesPerIndex = new HashMap<Integer, JCheckBox>();
+					final JPanel checkboxesPanel = new JPanel(new GridLayout(colCount, 1));
+					checkboxesPanel.add(new JLabel("Warning: unsaved changes will be lost!\n\nSelect files to close:"));
+					for (int i = 1; i < colCount; i++) {
+						final File file = mainModel.getFile(i);
+						indexes.add(i);
+						final JCheckBox checkBox = new JCheckBox(file.getAbsolutePath());
+						checkboxesPerIndex.put(i, checkBox);
+						checkboxesPanel.add(checkBox);
+					}
+					final JScrollPane scrollPane = new JScrollPane(checkboxesPanel);
+					scrollPane.setPreferredSize(new Dimension(Math.min(Toolkit.getDefaultToolkit().getScreenSize().width / 2,
+							checkboxesPanel.getPreferredSize().width), Math.min(Toolkit.getDefaultToolkit().getScreenSize().height / 2,
+							checkboxesPanel.getPreferredSize().height)));
+					if (JOptionPane.OK_OPTION == JOptionPane.showConfirmDialog(mainWindow, scrollPane, "Close files", JOptionPane.OK_CANCEL_OPTION)) {
+						for (final Integer index : indexes) {
+							if (checkboxesPerIndex.get(index).isSelected()) {
+								mainModel.removeData(index);
+							}
+						}
+					}
+					btnClose.setEnabled(true);
 				}
 			}
 		});
@@ -144,8 +187,11 @@ public class Cod4WeaponEditor {
 						checkboxesPerFile.put(file, checkBox);
 						checkboxesPanel.add(checkBox);
 					}
-
-					if (JOptionPane.OK_OPTION == JOptionPane.showConfirmDialog(mainWindow, checkboxesPanel, "Save files", JOptionPane.OK_CANCEL_OPTION)) {
+					final JScrollPane scrollPane = new JScrollPane(checkboxesPanel);
+					scrollPane.setPreferredSize(new Dimension(Math.min(Toolkit.getDefaultToolkit().getScreenSize().width / 2,
+							checkboxesPanel.getPreferredSize().width), Math.min(Toolkit.getDefaultToolkit().getScreenSize().height / 2,
+							checkboxesPanel.getPreferredSize().height)));
+					if (JOptionPane.OK_OPTION == JOptionPane.showConfirmDialog(mainWindow, scrollPane, "Save files", JOptionPane.OK_CANCEL_OPTION)) {
 						new Thread() {
 							public void run() {
 								try {
@@ -257,12 +303,14 @@ public class Cod4WeaponEditor {
 
 		final JPanel mainContentPanel = new JPanel(new BorderLayout());
 		mainContentPanel.setBorder(BorderFactory.createTitledBorder("Weapon properties"));
-		mainContentPanel.add(new JScrollPane(table), BorderLayout.CENTER);
+		table.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
+		mainContentPanel.add(new JScrollPane(table, JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED, JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED), BorderLayout.CENTER);
 		mainContentPanel.add(propBtnPabel, BorderLayout.NORTH);
 
-		final JPanel btnPanel = new JPanel(new GridLayout(1, 3));
+		final JPanel btnPanel = new JPanel(new GridLayout(2, 3));
 		btnPanel.add(btnLoad);
 		btnPanel.add(btnSave);
+		btnPanel.add(btnClose);
 		btnPanel.add(btnSaveAll);
 		btnPanel.setBorder(BorderFactory.createTitledBorder("File operations"));
 
