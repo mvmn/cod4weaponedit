@@ -60,7 +60,7 @@ public class MainTableModel implements TableModel {
 			final Map<Integer, File> newFileMap = new TreeMap<Integer, File>(fileMap);
 			newDataMap.remove(index);
 			newFileMap.remove(index);
-			for (int i = index; i < lastIndex - 1; i++) {
+			for (int i = index; i < lastIndex; i++) {
 				newDataMap.put(i, newDataMap.get(i + 1));
 				newFileMap.put(i, newFileMap.get(i + 1));
 			}

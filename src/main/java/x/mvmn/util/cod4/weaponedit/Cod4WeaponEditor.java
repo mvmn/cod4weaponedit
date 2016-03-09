@@ -8,6 +8,7 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.File;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -32,10 +33,10 @@ import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 import javax.swing.table.TableRowSorter;
 
-import com.cordinc.util.gui.ClipboardKeyAdapter;
-
 import x.mvmn.util.cod4.weaponedit.model.WeaponData;
 import x.mvmn.util.cod4.weaponedit.service.WeaponDataService;
+
+import com.cordinc.util.gui.ClipboardKeyAdapter;
 
 public class Cod4WeaponEditor {
 
@@ -161,6 +162,9 @@ public class Cod4WeaponEditor {
 							scrollPane.getPreferredSize().width), Math.min(Toolkit.getDefaultToolkit().getScreenSize().height / 2,
 							scrollPane.getPreferredSize().height)));
 					if (JOptionPane.OK_OPTION == JOptionPane.showConfirmDialog(mainWindow, scrollPane, "Close files", JOptionPane.OK_CANCEL_OPTION)) {
+
+						Collections.sort(indexes);
+						Collections.reverse(indexes);
 						for (final Integer index : indexes) {
 							if (checkboxesPerIndex.get(index).isSelected()) {
 								mainModel.removeData(index);
